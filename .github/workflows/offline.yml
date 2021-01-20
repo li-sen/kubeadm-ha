@@ -35,15 +35,15 @@ jobs:
     - name: Upload artifact to oss
       id: oss
       run: |
-        wget https://dl.min.io/client/mc/release/linux-amd64/mc
+        apt update
+        apt install jq -y
+        curl -sSLo mc https://dl.min.io/client/mc/release/linux-amd64/mc
         chmod +x mc
         ./mc alias set minio https://oss.saas.hand-china.com ${{ secrets.OSS_USERNAME }} ${{ secrets.OSS_TOKEN }}
-        ./mc cp -q --json offline/kubeadm-ha-1.20.1.tar minio/kubeadm-ha 2>&1 | tee oss.log
-        echo "::warning file=oss.saas.hand-china.com::$(cat oss.log | grep target)"
-        echo "::set-output name=url::https://oss.saas.hand-china.com/$(cat oss.log | grep https | cut -f3 -d" ")"
-        ./mc cp -q --json offline/docker-ce-19.03.13.tar.gz minio/kubeadm-ha 2>&1 | tee oss.log
-        echo "::set-output name=url::https://oss.saas.hand-china.com/$(cat oss.log | grep https | cut -f3 -d" ")"
-
+        ./mc cp --json offline/docker-ce-19.03.13.tar.gz minio/kubeadm-ha 2>&1 | tee oss.log
+        echo "::warning file=docker-ce::https://oss.saas.hand-china.com/$(cat oss.log | jq -r 'select(.target)|.target')"
+        ./mc cp --json offline/kubeadm-ha-1.20.1.tar minio/kubeadm-ha 2>&1 | tee oss.log
+        echo "::warning file=kubeadm-ha::https://oss.saas.hand-china.com/$(cat oss.log | jq -r 'select(.target)|.target')"
     - name: Upload artifact to WeTransfer
       id: wetransfer
       run: |
@@ -52,7 +52,6 @@ jobs:
         offline/kubeadm-ha-1.20.1.tar \
         offline/docker-ce-19.03.13.tar.gz 2>&1 | tee wetransfer.log
         echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
-        echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
     - name: Delete workflow runs
       uses: GitRML/delete-workflow-runs@main
       with:
